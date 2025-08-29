@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>μSEEK - Your Music Universe</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/styles/index-style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-animation">
+            <div class="music-note">♪</div>
+            <div class="music-note">♫</div>
+            <div class="music-note">♪</div>
+            <div class="loading-text">Loading μSEEK</div>
+        </div>
+    </div>
+
+    <!-- Cursor -->
+    <div class="custom-cursor"></div>
+    <div class="cursor-follower"></div>
+
+    <!-- Floating Particles -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Animated Background -->
+    <div class="animated-bg">
+        <div class="bg-orbs">
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
+        </div>
+        <div class="floating-shapes">
+            <div class="shape triangle"></div>
+            <div class="shape circle"></div>
+            <div class="shape square"></div>
+            <div class="shape hexagon"></div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="logo" data-aos="fade-right" data-aos-duration="1000">
+                <i class="fas fa-music logo-icon"></i>
+                <span class="logo-text">μSEEK</span>
+                <div class="logo-underline"></div>
+            </div>
+            <ul class="nav-links">
+                <li data-aos="fade-down" data-aos-delay="100"><a href="#home" class="nav-link">Home</a></li>
+                <li data-aos="fade-down" data-aos-delay="200"><a href="#features" class="nav-link">Features</a></li>
+                <li data-aos="fade-down" data-aos-delay="300"><a href="#about" class="nav-link">About</a></li>
+                <li data-aos="fade-down" data-aos-delay="400"><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <button class="cta-button" data-aos="fade-left" data-aos-duration="1000" onclick="window.location.href='app.html'">
+                <span>Launch App</span>
+                <div class="button-shine"></div>
+            </button>
+            <button class="mobile-menu-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <div class="hero-badge" data-aos="zoom-in" data-aos-duration="800">
+                <i class="fas fa-star"></i>
+                <span>Now Live</span>
+            </div>
+            <h1 class="hero-title" data-aos="fade-up" data-aos-duration="1200">
+                <span class="title-line">Your Music</span>
+                <span class="title-line highlight">Universe</span>
+            </h1>
+            <p class="hero-description" data-aos="fade-up" data-aos-delay="300" data-aos-duration="1000">
+                Discover, upload, and share your favorite music with the world. 
+                Join a community of music lovers and creators in the ultimate audio experience.
+            </p>
+            <div class="hero-buttons" data-aos="fade-up" data-aos-delay="600" data-aos-duration="1000">
+                <a href="app.html" class="btn-primary">
+                    <span>Start Listening</span>
+                    <i class="fas fa-play"></i>
+                    <div class="btn-glow"></div>
+                </a>
+                <a href="#features" class="btn-secondary">
+                    <span>Learn More</span>
+                    <i class="fas fa-arrow-down"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="hero-visual" data-aos="zoom-in" data-aos-delay="800" data-aos-duration="1500">
+            <div class="music-player-mockup">
+                <div class="player-screen">
+                    <div class="now-playing">Now Playing</div>
+                    <div class="song-info">
+                        <div class="song-title">Amazing Track</div>
+                        <div class="artist-name">Featured Artist</div>
+                    </div>
+                    <div class="equalizer">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="scroll-indicator" data-aos="fade-up" data-aos-delay="1000">
+            <div class="scroll-text">Scroll to explore</div>
+            <div class="scroll-arrow">
+                <i class="fas fa-chevron-down"></i>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header" data-aos="fade-up" data-aos-duration="1000">
+                <div class="section-badge">Features</div>
+                <h2 class="section-title">Powerful Features</h2>
+                <p class="section-subtitle">Everything you need for the ultimate music experience</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="100" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-cloud-upload-alt feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Easy Upload</h3>
+                    <p>Upload your music files instantly with our drag-and-drop interface. Support for all major audio formats.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+                
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="200" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-play-circle feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>High-Quality Streaming</h3>
+                    <p>Experience crystal-clear audio with our advanced streaming technology. No compression, just pure sound.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+                
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="300" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-users feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Social Features</h3>
+                    <p>Like, comment, and share your favorite tracks. Connect with artists and discover new music through community.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+                
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="100" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-mobile-alt feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Mobile Responsive</h3>
+                    <p>Enjoy your music anywhere, anytime. Our platform works seamlessly across all devices and screen sizes.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+                
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="200" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-search feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Smart Search</h3>
+                    <p>Find exactly what you're looking for with our intelligent search engine. Search by song, artist, or album.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+                
+                <div class="feature-card" data-aos="flip-left" data-aos-delay="300" data-aos-duration="800">
+                    <div class="feature-icon-container">
+                        <i class="fas fa-list-music feature-icon"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <h3>Custom Playlists</h3>
+                    <p>Create and organize your music with custom playlists. Perfect for every mood and moment.</p>
+                    <div class="feature-hover-effect"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats" id="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="stat-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <span class="stat-number" data-target="10000">0</span>
+                    <span class="stat-label">Songs Uploaded</span>
+                    <div class="stat-glow"></div>
+                </div>
+                
+                <div class="stat-item" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <span class="stat-number" data-target="5000">0</span>
+                    <span class="stat-label">Active Users</span>
+                    <div class="stat-glow"></div>
+                </div>
+                
+                <div class="stat-item" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <span class="stat-number" data-target="50000">0</span>
+                    <span class="stat-label">Hours Listened</span>
+                    <div class="stat-glow"></div>
+                </div>
+                
+                <div class="stat-item" data-aos="zoom-in" data-aos-delay="400">
+                    <div class="stat-icon">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                    <span class="stat-number" data-target="1000">0</span>
+                    <span class="stat-label">Artists</span>
+                    <div class="stat-glow"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" data-aos="fade-up" data-aos-duration="1000">
+        <div class="cta-content">
+            <div class="cta-badge" data-aos="zoom-in">
+                <i class="fas fa-rocket"></i>
+                <span>Get Started</span>
+            </div>
+            <h2 data-aos="fade-up" data-aos-delay="200">Ready to Start Your Musical Journey?</h2>
+            <p data-aos="fade-up" data-aos-delay="400">Join thousands of music lovers and creators who have already made μSEEK their home for music discovery and sharing.</p>
+            <a href="app.html" class="btn-primary btn-large" data-aos="zoom-in" data-aos-delay="600">
+                <span>Get Started Now</span>
+                <i class="fas fa-arrow-right"></i>
+                <div class="btn-glow"></div>
+            </a>
+        </div>
+        <div class="cta-visual" data-aos="zoom-in" data-aos-delay="800">
+            <div class="floating-elements">
+                <div class="floating-note">♪</div>
+                <div class="floating-note">♫</div>
+                <div class="floating-note">♪</div>
+                <div class="floating-note">♫</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section" data-aos="fade-up" data-aos-delay="100">
+                <div class="footer-logo">
+                    <i class="fas fa-music"></i>
+                    <span>μSEEK</span>
+                </div>
+                <p>Your ultimate destination for music discovery, sharing, and community engagement.</p>
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-section" data-aos="fade-up" data-aos-delay="200">
+                <h3>Quick Links</h3>
+                <a href="#home">Home</a>
+                <a href="#features">Features</a>
+                <a href="#about">About</a>
+                <a href="#contact">Contact</a>
+            </div>
+            
+            <div class="footer-section" data-aos="fade-up" data-aos-delay="300">
+                <h3>Support</h3>
+                <a href="#">Help Center</a>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Contact Support</a>
+            </div>
+            
+            <div class="footer-section" data-aos="fade-up" data-aos-delay="400">
+                <h3>Contact</h3>
+                <p><i class="fas fa-envelope"></i> hello@museek.com</p>
+                <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                <p><i class="fas fa-map-marker-alt"></i> 123 Music St, Sound City, SC 12345</p>
+            </div>
+        </div>
+        
+        <div class="footer-bottom" data-aos="fade-up">
+            <p>&copy; 2024 μSEEK. All rights reserved. Made with <i class="fas fa-heart heartbeat"></i> for music lovers.</p>
+        </div>
+    </footer>
+
+    <!-- Back to Top Button -->
+    <button class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script src="../script/index-script.js"></script>
+</body>
+</html>
