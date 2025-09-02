@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Music Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .music-player {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .current-song {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .current-song h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .audio-controls {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        audio {
+            width: 100%;
+            height: 60px;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .playlist {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .playlist h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .song-item {
+            background: white;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .song-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .song-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .song-info {
+            flex: 1;
+        }
+
+        .song-name {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .song-path {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .play-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+
+        .song-item.active .play-button {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .song-item.active .play-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .upload-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .upload-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .no-songs {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+
+        @media (max-width: 600px) {
+            .music-player {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="music-player">
+        <div class="header">
+            <h1>🎵 My Music Player</h1>
+            <p>Play your favorite MP3 tracks</p>
+        </div>
+
+        <div class="current-song" id="currentSong">
+            <h3 id="songTitle">No song selected</h3>
+            <div class="audio-controls">
+                <audio id="audioPlayer" controls>
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" id="prevBtn" onclick="previousSong()">⏮️ Previous</button>
+            <button class="control-btn" id="nextBtn" onclick="nextSong()">Next ⏭️</button>
+            <button class="control-btn" onclick="shufflePlaylist()">🔀 Shuffle</button>
+        </div>
+
+        <div class="playlist">
+            <h3>Playlist</h3>
+            <div id="songList">
+                <div class="no-songs">
+                    No songs found. Add some MP3 files to your music folder or use the upload feature below.
+                </div>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <h4>Add Music Files</h4>
+            <input type="file" id="fileInput" class="file-input" multiple accept="audio/mp3,audio/mpeg" onchange="handleFileUpload(event)">
+            <label for="fileInput" class="file-label">📁 Choose MP3 Files</label>
+        </div>
+    </div>
+
+    <script>
+        let currentSongIndex = -1;
+        let songs = [];
+        let isShuffled = false;
+
+        // Your actual music files from the music folder
+        const commonMusicFiles = [
+            '24Kgoldn - Mood __Cute version[Slowed reverb](MP3_320K).mp3',
+            'Ainsi bas la vida(MP3_160K).mp3',
+            'Alan Walker - On My Way (Slowed_ Reverb_ Underwater)(MP3_160K).mp3',
+            'Alan Walker On my way 8DAudio (Slowed Reverb Underwater)(MP3_160K).mp3',
+            'Alan Walker * Ava Max - Alone* Pt. II (slowed reverb)(MP3_160K).mp3',
+            'All Comes Crashing (Official Lyric Video)(MP3_160K).mp3',
+            'Apna Bana Le - Bhediya * Varun Dhawan* Kriti Sanon_ Sachin-Jigar_ Arijit Singh_ Amitabh Bhattacharya(MP3_160K).mp3',
+            'Braden Ross - unalive [OFFICIAL AUDIO](MP3_160K).mp3',
+            'Clandestina (Cover)(MP3_160K).mp3',
+            'Dub_L U - Coolin_(MP3_160K).mp3',
+            'Ek Din Pyar * Slowed N Reverb * MC STAN Γ£¿(MP3_320K).mp3',
+            'Home - Machine Gun Kelly_ X Ambassadors * Bebe Rexha (Lyrics) --(MP3*160K).mp3',
+            'Indila - Derni├¿re Danse (Clip Officiel)(MP3_160K).mp3',
+            'Instasamka - ╨╛╤é╨║╨╗╤Ä╤ç╨░╤Ä ╤é╨╡╨╗╨╡╤ä╨╛╨╜ I Turn Off The Phone (slowed) (lyrics) english translate(MP3_320K).mp3',
+            'Marshmello ft. Khalid - Silence (Official Lyric Video)(MP3_160K).mp3',
+            'Melanie Martinez - Brain * Heart (Lyrics)(MP3*160K).mp3',
+            'NEFFEX - Cold Γ¥ä∩╕Å[Copyright Free] No.60(MP3_160K).mp3',
+            'NF - If You Want Love(MP3_160K).mp3',
+            'Skylar Grey - Last One Standing ft. Polo G_ Mozzy_ * Eminem [Official Audio](MP3*160K).mp3',
+            '[Da Da Da ╨ö╨░ ╨┤╨░ ╨┤╨░] Jarico Remix * VHWX Remastered(MP3*160K).mp3',
+            '*Below The Surface* - FNAF SISTER LOCATION SONG * by Griffinilla(MP3*160K).mp3',
+            '*TPL BM (OTP) - London View (Music Video) * Pressplay(MP3_160K).mp3',
+            '*Tum Hi Ho* Aashiqui 2 Full Song With Lyrics * Aditya Roy Kapur* Shraddha Kapoor(MP3_160K).mp3',
+            'agar tum saath ho song [slowed reverb] Lofi version ll The lofi --(MP3_160K).mp3',
+            'charly black - you_re perfect (lyrics) * perfect body with a perfect smile (slowed) (tiktok remix)(MP3*160K).mp3',
+            'david kushner - daylight (slowed reverb)(MP3_160K).mp3',
+            'kamin.mp3',
+            'tomato song__ tomato song btstomato songtomato song lyrics tomato song jungkook__ tomato song lofi__(MP3_320K).mp3',
+            'we don_t talk anymore but it_s that part u heard on tiktok (instrumental looped)(MP3_160K).mp3',
+            'wiz khalifa_ charlie puth - see you again (slowed down)(MP3_160K).mp3',
+            'µú«Σ╕âΦÅ£ πé╣πâ₧πéñπâ½πÇÇMusic Video(MP3_160K).mp3',
+            '╤ä╤Ç╨╛╨╖╨╕ (frozy) - Parano feat. DDB [Ultra Records](MP3_160K).mp3'
+        ];
+
+        // Initialize the music player
+        async function initMusicPlayer() {
+            await loadMusicFromFolder();
+            updatePlaylistDisplay();
+            updateControls();
+        }
+
+        // Function to clean up song names for display
+        function cleanSongName(fileName) {
+            return fileName
+                .replace('.mp3', '')
+                .replace(/\(MP3_\d+K\)/g, '') // Remove (MP3_160K) etc.
+                .replace(/[\[\]]/g, '') // Remove square brackets
+                .replace(/[_-]{2,}/g, ' - ') // Replace multiple underscores/dashes with single dash
+                .replace(/[_]/g, ' ') // Replace underscores with spaces
+                .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+                .trim();
+        }
+
+        // Try to load music files from the music folder
+        async function loadMusicFromFolder() {
+            songs = [];
+            
+            // Try to load your actual music files
+            for (const fileName of commonMusicFiles) {
+                try {
+                    const response = await fetch(`../music/${encodeURIComponent(fileName)}`, { method: 'HEAD' });
+                    if (response.ok) {
+                        songs.push({
+                            name: cleanSongName(fileName),
+                            path: `../music/${encodeURIComponent(fileName)}`,
+                            file: null,
+                            originalName: fileName
+                        });
+                    }
+                } catch (error) {
+                    // File doesn't exist or network error, continue
+                }
+            }
+        }
+
+        // Handle file upload
+        function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            
+            files.forEach(file => {
+                if (file.type === 'audio/mpeg' || file.type === 'audio/mp3') {
+                    const url = URL.createObjectURL(file);
+                    songs.push({
+                        name: file.name.replace('.mp3', ''),
+                        path: url,
+                        file: file
+                    });
+                }
+            });
+
+            updatePlaylistDisplay();
+            updateControls();
+
+            // Clear the file input
+            event.target.value = '';
+        }
+
+        // Update the playlist display
+        function updatePlaylistDisplay() {
+            const songList = document.getElementById('songList');
+            
+            if (songs.length === 0) {
+                songList.innerHTML = '<div class="no-songs">No songs found. Add some MP3 files to your music folder or use the upload feature below.</div>';
+                return;
+            }
+
+            songList.innerHTML = songs.map((song, index) => `
+                <div class="song-item ${index === currentSongIndex ? 'active' : ''}" onclick="playSong(${index})" title="${song.originalName || song.name}">
+                    <div class="song-info">
+                        <div class="song-name">${song.name}</div>
+                        <div class="song-path">${song.file ? 'Uploaded file' : 'Music folder'}</div>
+                    </div>
+                    <button class="play-button" onclick="event.stopPropagation(); playSong(${index})">
+                        ${index === currentSongIndex ? '⏸️ Playing' : '▶️ Play'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Play a specific song
+        function playSong(index) {
+            if (index < 0 || index >= songs.length) return;
+
+            currentSongIndex = index;
+            const song = songs[index];
+            const audioPlayer = document.getElementById('audioPlayer');
+            const songTitle = document.getElementById('songTitle');
+
+            audioPlayer.src = song.path;
+            songTitle.textContent = song.name;
+            
+            audioPlayer.play().catch(error => {
+                console.error('Error playing audio:', error);
+                alert('Unable to play this song. Please check if the file exists and is a valid MP3.');
+            });
+
+            updatePlaylistDisplay();
+            updateControls();
+        }
+
+        // Previous song
+        function previousSong() {
+            if (songs.length === 0) return;
+            
+            let newIndex = currentSongIndex - 1;
+            if (newIndex < 0) {
+                newIndex = songs.length - 1;
+            }
+            playSong(newIndex);
+        }
+
+        // Next song
+        function nextSong() {
+            if (songs.length === 0) return;
+            
+            let newIndex = currentSongIndex + 1;
+            if (newIndex >= songs.length) {
+                newIndex = 0;
+            }
+            playSong(newIndex);
+        }
+
+        // Shuffle playlist
+        function shufflePlaylist() {
+            if (songs.length < 2) return;
+
+            // Fisher-Yates shuffle
+            for (let i = songs.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [songs[i], songs[j]] = [songs[j], songs[i]];
+            }
+
+            currentSongIndex = -1;
+            updatePlaylistDisplay();
+            isShuffled = true;
+        }
+
+        // Update control buttons
+        function updateControls() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = songs.length === 0;
+            nextBtn.disabled = songs.length === 0;
+        }
+
+        // Auto-play next song when current song ends
+        document.getElementById('audioPlayer').addEventListener('ended', function() {
+            nextSong();
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initMusicPlayer);
+    </script>
+</body>
+</html>
