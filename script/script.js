@@ -1,533 +1,780 @@
-// Firebase Configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyD7bMlRUVdcvu-AnQsHXF_ZbvCr_8SJMC0",
-    authDomain: "mue-seek.firebaseapp.com",
-    projectId: "mue-seek",
-    storageBucket: "mue-seek.firebasestorage.app",
-    messagingSenderId: "719138784829",
-    appId: "1:719138784829:web:a673204bb45d9985f2cc54",
-    measurementId: "G-9KVZG9MP52"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
-
-// Application State
-let currentSongs = [];
-let currentSongIndex = -1;
-let isPlaying = false;
-let audioPlayer = document.getElementById('audioPlayer');
-let playerBar = document.getElementById('playerBar');
-
-// DOM Elements
-const musicFeed = document.getElementById('musicFeed');
-const uploadBtn = document.getElementById('uploadBtn');
-const uploadModal = document.getElementById('uploadModal');
-const closeModal = document.getElementById('closeModal');
-const uploadForm = document.getElementById('uploadForm');
-const searchInput = document.getElementById('searchInput');
-
-// Player Controls
-const playPauseBtn = document.getElementById('playPauseBtn');
-const prevBtn = document.getElementById('prevBtn');
-const nextBtn = document.getElementById('nextBtn');
-const progressSlider = document.getElementById('progressSlider');
-const progressFill = document.getElementById('progressFill');
-const currentTimeDisplay = document.getElementById('currentTime');
-const totalTimeDisplay = document.getElementById('totalTime');
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    loadMusicFeed();
-    setupEventListeners();
-});
-
-function setupEventListeners() {
-    // Modal Events
-    uploadBtn.addEventListener('click', () => {
-        uploadModal.style.display = 'block';
-    });
-
-    closeModal.addEventListener('click', () => {
-        uploadModal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === uploadModal) {
-            uploadModal.style.display = 'none';
-        }
-    });
-
-    // Upload Form
-    uploadForm.addEventListener('submit', handleMusicUpload);
-
-    // Search
-    searchInput.addEventListener('input', debounce(handleSearch, 300));
-
-    // Player Events
-    playPauseBtn.addEventListener('click', togglePlayPause);
-    prevBtn.addEventListener('click', playPrevious);
-    nextBtn.addEventListener('click', playNext);
-    
-    audioPlayer.addEventListener('timeupdate', updateProgress);
-    audioPlayer.addEventListener('loadedmetadata', updateDuration);
-    audioPlayer.addEventListener('ended', playNext);
-    
-    progressSlider.addEventListener('input', seekAudio);
-}
-
-// Music Upload Handler
-async function handleMusicUpload(e) {
-    e.preventDefault();
-    
-    const musicFile = document.getElementById('musicFile').files[0];
-    const songTitle = document.getElementById('songTitle').value;
-    const artistName = document.getElementById('artistName').value;
-    const albumName = document.getElementById('albumName').value;
-    const coverImage = document.getElementById('coverImage').files[0];
-
-    if (!musicFile || !songTitle || !artistName) {
-        alert('Please fill in all required fields');
-        return;
+// Futuristic Music Player JavaScript
+class FuturisticMusicPlayer {
+    constructor() {
+        this.currentSongIndex = -1;
+        this.songs = [];
+        this.isShuffled = false;
+        this.isPlaying = false;
+        this.volume = 0.8;
+        this.isMuted = false;
+        this.previousVolume = 0.8;
+        
+        this.init();
+        this.loadPredefinedSongs();
     }
 
-    try {
-        // Show loading
-        const submitBtn = document.querySelector('.submit-btn');
-        submitBtn.textContent = 'Uploading...';
-        submitBtn.disabled = true;
-
-        // Upload music file
-        const musicRef = storage.ref().child(`music/${Date.now()}_${musicFile.name}`);
-        const musicSnapshot = await musicRef.put(musicFile);
-        const musicUrl = await musicSnapshot.ref.getDownloadURL();
-
-        // Upload cover image if provided
-        let coverUrl = '/api/placeholder/300/300';
-        if (coverImage) {
-            const coverRef = storage.ref().child(`covers/${Date.now()}_${coverImage.name}`);
-            const coverSnapshot = await coverRef.put(coverImage);
-            coverUrl = await coverSnapshot.ref.getDownloadURL();
-        }
-
-        // Save to Firestore
-        const docRef = await db.collection('songs').add({
-            title: songTitle,
-            artist: artistName,
-            album: albumName || 'Unknown Album',
-            musicUrl: musicUrl,
-            coverUrl: coverUrl,
-            likes: 0,
-            comments: [],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            duration: 0 // Will be updated when audio loads
-        });
-
-        console.log('Song uploaded with ID: ', docRef.id);
-        
-        // Reset form and close modal
-        uploadForm.reset();
-        uploadModal.style.display = 'none';
-        
-        // Reload feed
-        loadMusicFeed();
-
-    } catch (error) {
-        console.error('Error uploading song:', error);
-        alert('Error uploading song. Please try again.');
-    } finally {
-        // Reset button
-        const submitBtn = document.querySelector('.submit-btn');
-        submitBtn.textContent = 'Upload Music';
-        submitBtn.disabled = false;
+    init() {
+        this.initializeAOS();
+        this.setupLoadingScreen();
+        this.setupCustomCursor();
+        this.setupNavbar();
+        this.setupBackToTop();
+        this.setupAudioPlayer();
+        this.setupProgressBar();
+        this.setupVolumeControls();
+        this.setupKeyboardControls();
+        this.setupUploadArea();
+        this.startAnimations();
     }
-}
 
-// Load Music Feed
-async function loadMusicFeed() {
-    try {
-        musicFeed.innerHTML = '<div class="loading"></div>';
-        
-        const snapshot = await db.collection('songs')
-            .orderBy('createdAt', 'desc')
-            .limit(20)
-            .get();
-
-        currentSongs = [];
-        musicFeed.innerHTML = '';
-
-        snapshot.forEach((doc, index) => {
-            const song = { id: doc.id, ...doc.data() };
-            currentSongs.push(song);
-            createMusicCard(song, index);
-        });
-
-        if (currentSongs.length === 0) {
-            musicFeed.innerHTML = `
-                <div style="text-align: center; padding: 3rem; color: #aaaaaa;">
-                    <i class="fas fa-music" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                    <p>No music uploaded yet. Be the first to share your favorite songs!</p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error loading music feed:', error);
-        musicFeed.innerHTML = `
-            <div style="text-align: center; padding: 3rem; color: #ff6b6b;">
-                <p>Error loading music feed. Please refresh the page.</p>
-            </div>
-        `;
-    }
-}
-
-// Create Music Card
-function createMusicCard(song, index) {
-    const card = document.createElement('div');
-    card.className = 'music-card';
-    card.innerHTML = `
-        <div class="music-header">
-            <img src="${song.coverUrl}" alt="Cover" class="music-cover" onerror="this.src='/api/placeholder/80/80'">
-            <div class="music-info">
-                <div class="music-title">${escapeHtml(song.title)}</div>
-                <div class="music-artist">${escapeHtml(song.artist)}</div>
-                <div class="music-album">${escapeHtml(song.album)}</div>
-            </div>
-        </div>
-        
-        <div class="music-controls">
-            <button class="play-button" onclick="playSong(${index})">
-                <i class="fas fa-play"></i>
-            </button>
-            <span class="music-duration" id="duration-${song.id}">--:--</span>
-        </div>
-        
-        <div class="music-actions">
-            <div class="action-buttons">
-                <button class="action-btn like-btn" onclick="toggleLike('${song.id}')" data-liked="false">
-                    <i class="far fa-heart"></i>
-                    <span class="like-count">${song.likes || 0}</span>
-                </button>
-                <button class="action-btn comment-btn" onclick="toggleComments('${song.id}')">
-                    <i class="far fa-comment"></i>
-                    <span class="comment-count">${song.comments ? song.comments.length : 0}</span>
-                </button>
-            </div>
-        </div>
-        
-        <div class="comments-section hidden" id="comments-${song.id}">
-            <div class="comment-input">
-                <input type="text" placeholder="Add a comment..." id="comment-input-${song.id}" maxlength="500">
-                <button class="comment-btn" onclick="addComment('${song.id}')">Post</button>
-            </div>
-            <div class="comments-list" id="comments-list-${song.id}">
-                ${renderComments(song.comments || [])}
-            </div>
-        </div>
-    `;
-    
-    musicFeed.appendChild(card);
-    
-    // Load audio duration
-    loadAudioDuration(song.musicUrl, song.id);
-}
-
-// Render Comments
-function renderComments(comments) {
-    if (!comments || comments.length === 0) {
-        return '<p style="color: #aaaaaa; text-align: center; padding: 1rem;">No comments yet</p>';
-    }
-    
-    return comments.map(comment => `
-        <div class="comment">
-            <div class="comment-user">Anonymous User</div>
-            <div class="comment-text">${escapeHtml(comment.text)}</div>
-            <div class="comment-time">${formatTime(comment.timestamp)}</div>
-        </div>
-    `).join('');
-}
-
-// Load Audio Duration
-function loadAudioDuration(url, songId) {
-    const audio = new Audio();
-    audio.addEventListener('loadedmetadata', () => {
-        const duration = formatDuration(audio.duration);
-        const durationElement = document.getElementById(`duration-${songId}`);
-        if (durationElement) {
-            durationElement.textContent = duration;
-        }
-    });
-    audio.src = url;
-}
-
-// Play Song
-function playSong(index) {
-    if (currentSongIndex === index && !audioPlayer.paused) {
-        // Pause current song
-        audioPlayer.pause();
-        updatePlayButton(false);
-        return;
-    }
-    
-    currentSongIndex = index;
-    const song = currentSongs[index];
-    
-    audioPlayer.src = song.musicUrl;
-    audioPlayer.load();
-    
-    audioPlayer.play().then(() => {
-        updatePlayerBar(song);
-        updatePlayButton(true);
-        playerBar.style.display = 'flex';
-    }).catch(error => {
-        console.error('Error playing song:', error);
-        alert('Error playing song. Please try again.');
-    });
-}
-
-// Update Player Bar
-function updatePlayerBar(song) {
-    document.getElementById('playerCover').src = song.coverUrl;
-    document.getElementById('playerTitle').textContent = song.title;
-    document.getElementById('playerArtist').textContent = song.artist;
-}
-
-// Update Play Button
-function updatePlayButton(playing) {
-    const icon = playPauseBtn.querySelector('i');
-    if (playing) {
-        icon.className = 'fas fa-pause';
-    } else {
-        icon.className = 'fas fa-play';
-    }
-}
-
-// Toggle Play/Pause
-function togglePlayPause() {
-    if (currentSongIndex === -1) return;
-    
-    if (audioPlayer.paused) {
-        audioPlayer.play();
-        updatePlayButton(true);
-    } else {
-        audioPlayer.pause();
-        updatePlayButton(false);
-    }
-}
-
-// Play Previous
-function playPrevious() {
-    if (currentSongIndex > 0) {
-        playSong(currentSongIndex - 1);
-    }
-}
-
-// Play Next
-function playNext() {
-    if (currentSongIndex < currentSongs.length - 1) {
-        playSong(currentSongIndex + 1);
-    }
-}
-
-// Update Progress
-function updateProgress() {
-    if (audioPlayer.duration) {
-        const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        progressFill.style.width = `${progress}%`;
-        progressSlider.value = progress;
-        currentTimeDisplay.textContent = formatDuration(audioPlayer.currentTime);
-    }
-}
-
-// Update Duration Display
-function updateDuration() {
-    totalTimeDisplay.textContent = formatDuration(audioPlayer.duration);
-}
-
-// Seek Audio
-function seekAudio() {
-    const seekTime = (progressSlider.value / 100) * audioPlayer.duration;
-    audioPlayer.currentTime = seekTime;
-}
-
-// Toggle Like
-async function toggleLike(songId) {
-    try {
-        const likeBtn = document.querySelector(`[onclick="toggleLike('${songId}')"]`);
-        const likeCountElement = likeBtn.querySelector('.like-count');
-        const heartIcon = likeBtn.querySelector('i');
-        
-        const isLiked = likeBtn.dataset.liked === 'true';
-        const increment = isLiked ? -1 : 1;
-        
-        // Update UI immediately
-        likeBtn.dataset.liked = !isLiked;
-        heartIcon.className = !isLiked ? 'fas fa-heart' : 'far fa-heart';
-        likeBtn.classList.toggle('active', !isLiked);
-        
-        const currentCount = parseInt(likeCountElement.textContent) || 0;
-        likeCountElement.textContent = currentCount + increment;
-        
-        // Update in database
-        await db.collection('songs').doc(songId).update({
-            likes: firebase.firestore.FieldValue.increment(increment)
-        });
-        
-    } catch (error) {
-        console.error('Error toggling like:', error);
-        // Revert UI changes on error
-        location.reload();
-    }
-}
-
-// Toggle Comments Section
-function toggleComments(songId) {
-    const commentsSection = document.getElementById(`comments-${songId}`);
-    commentsSection.classList.toggle('hidden');
-}
-
-// Add Comment
-async function addComment(songId) {
-    const commentInput = document.getElementById(`comment-input-${songId}`);
-    const commentText = commentInput.value.trim();
-    
-    if (!commentText) return;
-    
-    try {
-        const comment = {
-            text: commentText,
-            timestamp: new Date(),
-            userId: 'anonymous' // In a real app, you'd have user authentication
-        };
-        
-        // Update UI immediately
-        const commentsList = document.getElementById(`comments-list-${songId}`);
-        const commentElement = document.createElement('div');
-        commentElement.innerHTML = `
-            <div class="comment">
-                <div class="comment-user">Anonymous User</div>
-                <div class="comment-text">${escapeHtml(comment.text)}</div>
-                <div class="comment-time">Just now</div>
-            </div>
-        `;
-        
-        if (commentsList.innerHTML.includes('No comments yet')) {
-            commentsList.innerHTML = '';
-        }
-        commentsList.insertBefore(commentElement, commentsList.firstChild);
-        
-        // Update comment count
-        const commentBtn = document.querySelector(`[onclick="toggleComments('${songId}')"]`);
-        const countElement = commentBtn.querySelector('.comment-count');
-        const currentCount = parseInt(countElement.textContent) || 0;
-        countElement.textContent = currentCount + 1;
-        
-        // Clear input
-        commentInput.value = '';
-        
-        // Update in database
-        await db.collection('songs').doc(songId).update({
-            comments: firebase.firestore.FieldValue.arrayUnion(comment)
-        });
-        
-    } catch (error) {
-        console.error('Error adding comment:', error);
-        alert('Error adding comment. Please try again.');
-    }
-}
-
-// Search Handler
-async function handleSearch() {
-    const query = searchInput.value.toLowerCase().trim();
-    
-    if (!query) {
-        loadMusicFeed();
-        return;
-    }
-    
-    try {
-        musicFeed.innerHTML = '<div class="loading"></div>';
-        
-        const snapshot = await db.collection('songs').get();
-        const filteredSongs = [];
-        
-        snapshot.forEach((doc) => {
-            const song = { id: doc.id, ...doc.data() };
-            const title = song.title.toLowerCase();
-            const artist = song.artist.toLowerCase();
-            const album = song.album.toLowerCase();
-            
-            if (title.includes(query) || artist.includes(query) || album.includes(query)) {
-                filteredSongs.push(song);
-            }
-        });
-        
-        currentSongs = filteredSongs;
-        musicFeed.innerHTML = '';
-        
-        if (filteredSongs.length === 0) {
-            musicFeed.innerHTML = `
-                <div style="text-align: center; padding: 3rem; color: #aaaaaa;">
-                    <i class="fas fa-search" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                    <p>No songs found matching "${query}"</p>
-                </div>
-            `;
-        } else {
-            filteredSongs.forEach((song, index) => {
-                createMusicCard(song, index);
+    // Initialize AOS (Animate On Scroll)
+    initializeAOS() {
+        if (typeof AOS !== 'undefined') {
+            AOS.init({
+                duration: 800,
+                easing: 'ease-in-out',
+                once: true,
+                mirror: false
             });
         }
+    }
+
+    // Loading Screen
+    setupLoadingScreen() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+            }, 2000);
+        });
+    }
+
+    // Custom Cursor
+    setupCustomCursor() {
+        const cursor = document.querySelector('.custom-cursor');
+        const cursorFollower = document.querySelector('.cursor-follower');
         
-    } catch (error) {
-        console.error('Error searching songs:', error);
+        if (!cursor || !cursorFollower) return;
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            
+            setTimeout(() => {
+                cursorFollower.style.left = e.clientX + 'px';
+                cursorFollower.style.top = e.clientY + 'px';
+            }, 100);
+        });
+
+        const interactiveElements = document.querySelectorAll('a, button, .nav-link, .control-btn, .song-item, .upload-area');
+        
+        interactiveElements.forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.transform = 'scale(1.5)';
+                cursorFollower.style.transform = 'scale(1.2)';
+                cursorFollower.style.borderColor = 'rgba(138, 43, 226, 0.8)';
+            });
+            
+            el.addEventListener('mouseleave', () => {
+                cursor.style.transform = 'scale(1)';
+                cursorFollower.style.transform = 'scale(1)';
+                cursorFollower.style.borderColor = 'rgba(138, 43, 226, 0.5)';
+            });
+        });
+    }
+
+    // Navbar effects
+    setupNavbar() {
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    }
+
+    // Back to top button
+    setupBackToTop() {
+        const backToTopBtn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 500) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    // Audio Player Setup
+    setupAudioPlayer() {
+        this.audioPlayer = document.getElementById('audioPlayer');
+        this.playBtn = document.getElementById('playBtn');
+        this.playIcon = document.getElementById('playIcon');
+        
+        this.audioPlayer.addEventListener('loadedmetadata', () => {
+            this.updateTotalTime();
+            this.updateProgressBar();
+        });
+
+        this.audioPlayer.addEventListener('timeupdate', () => {
+            this.updateCurrentTime();
+            this.updateProgressBar();
+        });
+
+        this.audioPlayer.addEventListener('ended', () => {
+            this.nextSong();
+        });
+
+        this.audioPlayer.addEventListener('play', () => {
+            this.isPlaying = true;
+            this.updatePlayButton();
+            this.startEqualizer();
+        });
+
+        this.audioPlayer.addEventListener('pause', () => {
+            this.isPlaying = false;
+            this.updatePlayButton();
+            this.stopEqualizer();
+        });
+
+        this.audioPlayer.volume = this.volume;
+    }
+
+    // Progress Bar Controls
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.progressFill = document.getElementById('progressFill');
+        this.progressHandle = document.getElementById('progressHandle');
+
+        this.progressBar.addEventListener('click', (e) => {
+            if (!this.audioPlayer.duration) return;
+            
+            const rect = this.progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            const newTime = percent * this.audioPlayer.duration;
+            
+            this.audioPlayer.currentTime = newTime;
+            this.updateProgressBar();
+        });
+
+        let isDragging = false;
+
+        this.progressHandle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !this.audioPlayer.duration) return;
+            
+            const rect = this.progressBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const newTime = percent * this.audioPlayer.duration;
+            
+            this.audioPlayer.currentTime = newTime;
+            this.updateProgressBar();
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    }
+
+    // Volume Controls
+    setupVolumeControls() {
+        this.volumeSlider = document.getElementById('volumeSlider');
+        this.volumeFill = document.getElementById('volumeFill');
+        this.volumeHandle = document.getElementById('volumeHandle');
+        this.volumeBtn = document.getElementById('volumeBtn');
+        this.volumeIcon = document.getElementById('volumeIcon');
+
+        this.volumeSlider.addEventListener('click', (e) => {
+            const rect = this.volumeSlider.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            this.setVolume(percent);
+        });
+
+        let isVolumeDragging = false;
+
+        this.volumeHandle.addEventListener('mousedown', (e) => {
+            isVolumeDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isVolumeDragging) return;
+            
+            const rect = this.volumeSlider.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            this.setVolume(percent);
+        });
+
+        document.addEventListener('mouseup', () => {
+            isVolumeDragging = false;
+        });
+
+        this.updateVolumeDisplay();
+    }
+
+    // Keyboard Controls
+    setupKeyboardControls() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    this.togglePlayPause();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.nextSong();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.previousSong();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.setVolume(Math.min(1, this.volume + 0.1));
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.setVolume(Math.max(0, this.volume - 0.1));
+                    break;
+                case 'KeyM':
+                    e.preventDefault();
+                    this.toggleMute();
+                    break;
+                case 'KeyS':
+                    e.preventDefault();
+                    this.shufflePlaylist();
+                    break;
+            }
+        });
+    }
+
+    // Upload Area Setup
+    setupUploadArea() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(138, 43, 226, 0.2)';
+            uploadArea.style.borderColor = '#8a2be2';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = 'rgba(255, 255, 255, 0.05)';
+            uploadArea.style.borderColor = 'rgba(138, 43, 226, 0.4)';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(255, 255, 255, 0.05)';
+            uploadArea.style.borderColor = 'rgba(138, 43, 226, 0.4)';
+            
+            const files = Array.from(e.dataTransfer.files);
+            this.handleFiles(files);
+        });
+    }
+
+    // Start Animations
+    startAnimations() {
+        this.animateParticles();
+        this.animateEqualizer();
+        this.setupParallax();
+    }
+
+    // Animate particles
+    animateParticles() {
+        const particles = document.querySelectorAll('.particle');
+        particles.forEach((particle, index) => {
+            const randomX = Math.random() * 100;
+            const randomY = Math.random() * 100;
+            const randomDelay = Math.random() * 5;
+            const randomDuration = 15 + Math.random() * 10;
+            
+            particle.style.left = `${randomX}%`;
+            particle.style.top = `${randomY}%`;
+            particle.style.animationDelay = `${randomDelay}s`;
+            particle.style.animationDuration = `${randomDuration}s`;
+        });
+    }
+
+    // Equalizer animation
+    animateEqualizer() {
+        this.equalizerBars = document.querySelectorAll('.equalizer .bar');
+        this.equalizerInterval = null;
+    }
+
+    startEqualizer() {
+        if (this.equalizerInterval) return;
+        
+        this.equalizerInterval = setInterval(() => {
+            this.equalizerBars.forEach(bar => {
+                const randomHeight = Math.floor(Math.random() * 60) + 20;
+                bar.style.height = `${randomHeight}px`;
+            });
+        }, 150);
+    }
+
+    stopEqualizer() {
+        if (this.equalizerInterval) {
+            clearInterval(this.equalizerInterval);
+            this.equalizerInterval = null;
+        }
+        
+        this.equalizerBars.forEach((bar, index) => {
+            const baseHeights = [40, 60, 35, 70, 25, 55, 45];
+            bar.style.height = `${baseHeights[index] || 40}px`;
+        });
+    }
+
+    // Parallax effects
+    setupParallax() {
+        window.addEventListener('scroll', () => {
+            const scrollPosition = window.scrollY;
+            
+            document.querySelectorAll('.orb').forEach((orb, index) => {
+                const speed = 0.05 * (index + 1);
+                orb.style.transform = `translateY(${scrollPosition * speed}px)`;
+            });
+            
+            document.querySelectorAll('.shape').forEach((shape, index) => {
+                const speed = 0.03 * (index + 1);
+                shape.style.transform = `translateY(${scrollPosition * speed}px)`;
+            });
+        });
+    }
+
+    // Load predefined songs
+    loadPredefinedSongs() {
+        const commonMusicFiles = [
+            '24Kgoldn - Mood __Cute version[Slowed reverb](MP3_320K).mp3',
+            'Ainsi bas la vida(MP3_160K).mp3',
+            'Alan Walker - On My Way (Slowed_ Reverb_ Underwater)(MP3_160K).mp3',
+            'Alan Walker On my way 8DAudio (Slowed Reverb Underwater)(MP3_160K).mp3',
+            'Alan Walker * Ava Max - Alone* Pt. II (slowed reverb)(MP3_160K).mp3',
+            'All Comes Crashing (Official Lyric Video)(MP3_160K).mp3',
+            'Apna Bana Le - Bhediya * Varun Dhawan* Kriti Sanon_ Sachin-Jigar_ Arijit Singh_ Amitabh Bhattacharya(MP3_160K).mp3',
+            'Braden Ross - unalive [OFFICIAL AUDIO](MP3_160K).mp3',
+            'Clandestina (Cover)(MP3_160K).mp3',
+            'Dub_L U - Coolin_(MP3_160K).mp3',
+            'Ek Din Pyar * Slowed N Reverb * MC STAN Γ£¿(MP3_320K).mp3',
+            'Home - Machine Gun Kelly_ X Ambassadors * Bebe Rexha (Lyrics) --(MP3*160K).mp3',
+            'Indila - Dernière Danse (Clip Officiel)(MP3_160K).mp3',
+            'Marshmello ft. Khalid - Silence (Official Lyric Video)(MP3_160K).mp3',
+            'Melanie Martinez - Brain * Heart (Lyrics)(MP3*160K).mp3',
+            'NEFFEX - Cold [Copyright Free] No.60(MP3_160K).mp3',
+            'NF - If You Want Love(MP3_160K).mp3',
+            'Skylar Grey - Last One Standing ft. Polo G_ Mozzy_ * Eminem [Official Audio](MP3*160K).mp3',
+            'kamin.mp3',
+            'tomato song__ tomato song btstomato songtomato song lyrics tomato song jungkook__ tomato song lofi__(MP3_320K).mp3',
+            'we don_t talk anymore but it_s that part u heard on tiktok (instrumental looped)(MP3_160K).mp3',
+            'wiz khalifa_ charlie puth - see you again (slowed down)(MP3_160K).mp3'
+        ];
+
+        this.songs = [];
+        
+        commonMusicFiles.forEach(async fileName => {
+            try {
+                const response = await fetch(`../music/${encodeURIComponent(fileName)}`, { method: 'HEAD' });
+                if (response.ok) {
+                    this.songs.push({
+                        name: this.cleanSongName(fileName),
+                        path: `../music/${encodeURIComponent(fileName)}`,
+                        file: null,
+                        originalName: fileName,
+                        duration: 0
+                    });
+                }
+            } catch (error) {
+                console.log(`File ${fileName} not found`);
+            }
+        });
+
+        setTimeout(() => {
+            this.updatePlaylistDisplay();
+            this.updateStats();
+        }, 1000);
+    }
+
+    // Clean song names
+    cleanSongName(fileName) {
+        return fileName
+            .replace('.mp3', '')
+            .replace(/\(MP3_\d+K\)/g, '')
+            .replace(/[\[\]]/g, '')
+            .replace(/[_-]{2,}/g, ' - ')
+            .replace(/[_]/g, ' ')
+            .replace(/\*/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    // Handle file upload
+    handleFiles(files) {
+        files.forEach(file => {
+            if (file.type === 'audio/mpeg' || file.type === 'audio/mp3') {
+                const url = URL.createObjectURL(file);
+                this.songs.push({
+                    name: this.cleanSongName(file.name),
+                    path: url,
+                    file: file,
+                    originalName: file.name,
+                    duration: 0
+                });
+            }
+        });
+
+        this.updatePlaylistDisplay();
+        this.updateStats();
+        
+        // Show success notification
+        this.showNotification(`Added ${files.length} track(s) to your collection!`, 'success');
+    }
+
+    // Update playlist display
+    updatePlaylistDisplay() {
+        const songList = document.getElementById('songList');
+        
+        if (this.songs.length === 0) {
+            songList.innerHTML = `
+                <div class="no-songs">
+                    <div class="no-songs-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <h3>No tracks loaded</h3>
+                    <p>Add some music files to start your journey</p>
+                </div>
+            `;
+            return;
+        }
+
+        songList.innerHTML = this.songs.map((song, index) => `
+            <div class="song-item ${index === this.currentSongIndex ? 'active' : ''}" 
+                 onclick="player.playSong(${index})" 
+                 title="${song.originalName || song.name}"
+                 data-aos="fade-up" 
+                 data-aos-delay="${index * 50}">
+                <div class="song-info">
+                    <div class="song-name">${song.name}</div>
+                    <div class="song-path">${song.file ? 'Uploaded file' : 'Music folder'}</div>
+                </div>
+                <button class="play-button" onclick="event.stopPropagation(); player.playSong(${index})">
+                    ${index === this.currentSongIndex ? (this.isPlaying ? '⏸️ Pause' : '▶️ Play') : '▶️ Play'}
+                </button>
+            </div>
+        `).join('');
+
+        // Reinitialize AOS for new elements
+        if (typeof AOS !== 'undefined') {
+            AOS.refresh();
+        }
+    }
+
+    // Update stats
+    updateStats() {
+        document.getElementById('totalTracks').textContent = this.songs.length;
+        document.getElementById('currentIndex').textContent = this.currentSongIndex >= 0 ? this.currentSongIndex + 1 : '-';
+        
+        // Calculate total duration (simplified)
+        const estimatedDuration = this.songs.length * 210; // Assume 3.5 minutes per song
+        const hours = Math.floor(estimatedDuration / 3600);
+        const minutes = Math.floor((estimatedDuration % 3600) / 60);
+        document.getElementById('totalDuration').textContent = hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}:00` : `${minutes}:00`;
+    }
+
+    // Play a specific song
+    playSong(index) {
+        if (index < 0 || index >= this.songs.length) return;
+
+        this.currentSongIndex = index;
+        const song = this.songs[index];
+        
+        this.audioPlayer.src = song.path;
+        this.updateSongDisplay(song);
+        
+        this.audioPlayer.play().catch(error => {
+            console.error('Error playing audio:', error);
+            this.showNotification('Unable to play this track', 'error');
+        });
+
+        this.updatePlaylistDisplay();
+        this.updateStats();
+        
+        // Update artwork animation
+        this.updateArtworkAnimation();
+    }
+
+    // Toggle play/pause
+    togglePlayPause() {
+        if (this.currentSongIndex < 0 && this.songs.length > 0) {
+            this.playSong(0);
+            return;
+        }
+
+        if (this.isPlaying) {
+            this.audioPlayer.pause();
+        } else {
+            this.audioPlayer.play().catch(error => {
+                console.error('Error playing audio:', error);
+                this.showNotification('Unable to play this track', 'error');
+            });
+        }
+    }
+
+    // Previous song
+    previousSong() {
+        if (this.songs.length === 0) return;
+        
+        let newIndex = this.currentSongIndex - 1;
+        if (newIndex < 0) {
+            newIndex = this.songs.length - 1;
+        }
+        this.playSong(newIndex);
+    }
+
+    // Next song
+    nextSong() {
+        if (this.songs.length === 0) return;
+        
+        let newIndex = this.currentSongIndex + 1;
+        if (newIndex >= this.songs.length) {
+            newIndex = 0;
+        }
+        this.playSong(newIndex);
+    }
+
+    // Shuffle playlist
+    shufflePlaylist() {
+        if (this.songs.length < 2) return;
+
+        const currentSong = this.currentSongIndex >= 0 ? this.songs[this.currentSongIndex] : null;
+        
+        // Fisher-Yates shuffle
+        for (let i = this.songs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.songs[i], this.songs[j]] = [this.songs[j], this.songs[i]];
+        }
+
+        // Update current song index if a song was playing
+        if (currentSong) {
+            this.currentSongIndex = this.songs.findIndex(song => song.path === currentSong.path);
+        }
+
+        this.isShuffled = !this.isShuffled;
+        this.updatePlaylistDisplay();
+        this.showNotification('Playlist shuffled!', 'success');
+        
+        // Update shuffle button state
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        if (this.isShuffled) {
+            shuffleBtn.classList.add('active');
+        } else {
+            shuffleBtn.classList.remove('active');
+        }
+    }
+
+    // Toggle mute
+    toggleMute() {
+        if (this.isMuted) {
+            this.audioPlayer.volume = this.previousVolume;
+            this.volume = this.previousVolume;
+            this.isMuted = false;
+            this.volumeIcon.className = this.volume > 0.5 ? 'fas fa-volume-up' : 'fas fa-volume-down';
+        } else {
+            this.previousVolume = this.volume;
+            this.audioPlayer.volume = 0;
+            this.volume = 0;
+            this.isMuted = true;
+            this.volumeIcon.className = 'fas fa-volume-mute';
+        }
+        
+        this.updateVolumeDisplay();
+    }
+
+    // Set volume
+    setVolume(volume) {
+        this.volume = Math.max(0, Math.min(1, volume));
+        this.audioPlayer.volume = this.volume;
+        
+        if (this.volume > 0 && this.isMuted) {
+            this.isMuted = false;
+        }
+        
+        // Update volume icon
+        if (this.volume === 0) {
+            this.volumeIcon.className = 'fas fa-volume-mute';
+        } else if (this.volume > 0.5) {
+            this.volumeIcon.className = 'fas fa-volume-up';
+        } else {
+            this.volumeIcon.className = 'fas fa-volume-down';
+        }
+        
+        this.updateVolumeDisplay();
+    }
+
+    // Update volume display
+    updateVolumeDisplay() {
+        const volumePercent = this.volume * 100;
+        this.volumeFill.style.width = `${volumePercent}%`;
+        this.volumeHandle.style.left = `${volumePercent}%`;
+    }
+
+    // Update song display
+    updateSongDisplay(song) {
+        document.getElementById('songTitle').textContent = song.name;
+        document.getElementById('songArtist').textContent = 'Curated by 𝗖𝗩♞𝗞𝗜';
+        
+        // Update artwork icon based on song type
+        const artworkIcon = document.getElementById('artworkIcon');
+        if (song.name.toLowerCase().includes('chill') || song.name.toLowerCase().includes('slow')) {
+            artworkIcon.className = 'fas fa-moon artwork-icon';
+        } else if (song.name.toLowerCase().includes('dance') || song.name.toLowerCase().includes('energy')) {
+            artworkIcon.className = 'fas fa-fire artwork-icon';
+        } else {
+            artworkIcon.className = 'fas fa-music artwork-icon';
+        }
+    }
+
+    // Update play button
+    updatePlayButton() {
+        if (this.isPlaying) {
+            this.playIcon.className = 'fas fa-pause';
+            this.playBtn.classList.add('active');
+        } else {
+            this.playIcon.className = 'fas fa-play';
+            this.playBtn.classList.remove('active');
+        }
+    }
+
+    // Update progress bar
+    updateProgressBar() {
+        if (!this.audioPlayer.duration) return;
+        
+        const progress = (this.audioPlayer.currentTime / this.audioPlayer.duration) * 100;
+        this.progressFill.style.width = `${progress}%`;
+        this.progressHandle.style.left = `${progress}%`;
+    }
+
+    // Update current time
+    updateCurrentTime() {
+        const current = this.formatTime(this.audioPlayer.currentTime);
+        document.getElementById('currentTime').textContent = current;
+    }
+
+    // Update total time
+    updateTotalTime() {
+        const total = this.formatTime(this.audioPlayer.duration);
+        document.getElementById('totalTime').textContent = total;
+    }
+
+    // Format time
+    formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    // Update artwork animation
+    updateArtworkAnimation() {
+        const artworkContainer = document.querySelector('.artwork-container');
+        
+        // Add a pulse effect when song changes
+        artworkContainer.style.animation = 'none';
+        setTimeout(() => {
+            artworkContainer.style.animation = 'artworkFloat 6s ease-in-out infinite';
+        }, 10);
+    }
+
+    // Show notification
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: ${type === 'error' ? 'rgba(255, 69, 58, 0.9)' : 'rgba(138, 43, 226, 0.9)'};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 10001;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            max-width: 300px;
+            font-weight: 500;
+        `;
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // Animate out and remove
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
     }
 }
 
-// Utility Functions
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// Global functions for HTML onclick handlers
+let player;
+
+function togglePlayPause() {
+    player.togglePlayPause();
 }
 
-function formatDuration(seconds) {
-    if (isNaN(seconds) || seconds === 0) return '--:--';
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+function previousSong() {
+    player.previousSong();
 }
 
-function formatTime(date) {
-    if (!date) return '';
-    
-    const now = new Date();
-    const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
-    return `${Math.floor(minutes / 1440)}d ago`;
+function nextSong() {
+    player.nextSong();
 }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+function shufflePlaylist() {
+    player.shufflePlaylist();
 }
 
-// Handle Enter key in comment inputs
-document.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && e.target.id && e.target.id.startsWith('comment-input-')) {
-        const songId = e.target.id.replace('comment-input-', '');
-        addComment(songId);
-    }
+function toggleMute() {
+    player.toggleMute();
+}
+
+function handleFileUpload(event) {
+    const files = Array.from(event.target.files);
+    player.handleFiles(files);
+    event.target.value = ''; // Clear the input
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    player = new FuturisticMusicPlayer();
 });
